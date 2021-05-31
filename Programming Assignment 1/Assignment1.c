@@ -145,6 +145,7 @@ void process_courses(Course *courses, int num_courses)
 
         free(outInfo->student->lname);
         free(outInfo->student->scores);
+        free(outInfo->student);
         //freeStudent(outInfo->student);
         free(outInfo->avg_scores_per_section);
         free(outInfo);
@@ -189,10 +190,8 @@ OutputInfo *countPassedStudents(Course *course)
     out_info->avg_scores_per_section = (float *)malloc(course->num_sections * sizeof(float));
 
     out_info->student = (Student *)malloc(sizeof(Student));
-    out_info->student->id = 0;
-    out_info->student->lname = (char *)malloc(sizeof(char) * (strlen(course->sections[0][0].lname) + 1));
+    out_info->student->lname = (char *)malloc((strlen(course->sections[0][0].lname) + 1) * sizeof(char));
     out_info->student->scores = (float *)malloc(course->num_scores[0] * sizeof(float));
-    out_info->student->std_avg = 0;
 
     out_info->student->id = course->sections[0][0].id;
     out_info->student->std_avg = course->sections[0][0].std_avg;
