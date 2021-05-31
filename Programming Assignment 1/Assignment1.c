@@ -133,7 +133,7 @@ void process_courses(Course *courses, int num_courses)
 {
     for (size_t i = 0; i < num_courses; i++)
     {
-        Course *current_course = (courses + i);
+        Course *current_course = &courses[i];
         OutputInfo *outInfo = countPassedStudents(current_course);
 
         printf("%s %d", current_course->course_name, outInfo->pass_count);
@@ -202,7 +202,7 @@ OutputInfo *countPassedStudents(Course *course)
 
     for (size_t i = 0; i < course->num_sections; i++)
     {
-        float *avg_scores = (out_info->avg_scores_per_section + i);
+        float *avg_scores = &(out_info->avg_scores_per_section[i]);
         *avg_scores = 0;
 
         for (size_t j = 0; j < *(course->num_students + i); j++)
@@ -264,14 +264,14 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
         int *num_scores = (int *)StringToNumber(getWord(file), Integer);
         testLimits(*num_scores, MAX_NUM_OF_ASSIGNMENTS_IN_SECTION, false, file, "Assignment Number");
 
-        *(students + i) = *num_students;
-        *(scores + i) = *num_scores;
+        students[i] = *num_students;
+        scores[i] = *num_scores;
 
-        *(sections_and_students + i) = (Student *)malloc(*num_students * sizeof(Student));
+        sections_and_students[i] = (Student *)malloc(*num_students * sizeof(Student));
 
         for (size_t j = 0; j < *num_students; j++)
         {
-            Student *student = (*(sections_and_students + i) + j);
+            Student *student = &sections_and_students[i][j];
 
             int *id = (int *)StringToNumber(getWord(file), Integer);
             testLimits(*id, MAX_ID, true, file, "Student ID");
@@ -313,7 +313,7 @@ Course *readCourses(FileInfo *file, int *num_courses)
 
     for (size_t i = 0; i < *num_courses; i++)
     {
-        Course *current_course = (courses + i);
+        Course *current_course = &courses[i];
 
         current_course->course_name = getWord(file);
         testLimits((int)strlen(current_course->course_name), MAX_COURSE_NAME_LENGTH, false, file, "Course Name");
