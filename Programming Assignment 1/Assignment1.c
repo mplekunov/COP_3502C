@@ -259,12 +259,10 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
 
     for (size_t i = 0; i < num_sections; i++)
     {
-        char *num_students_str = getWord(file);
-        int *num_students = (int *)StringToNumber(num_students_str, Integer);
+        int *num_students = (int *)StringToNumber(getWord(file), Integer);
         testLimits(*num_students, MAX_NUM_OF_STUDENTS_IN_SECTION, false, file, "Student Number");
 
-        char *num_scores_str = getWord(file);
-        int *num_scores = (int *)StringToNumber(num_scores_str, Integer);
+        int *num_scores = (int *)StringToNumber(getWord(file), Integer);
         testLimits(*num_scores, MAX_NUM_OF_ASSIGNMENTS_IN_SECTION, false, file, "Assignment Number");
 
         *(students + i) = *num_students;
@@ -276,8 +274,7 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
         {
             Student *student = (*(sections_and_students + i) + j);
 
-            char *id_str = getWord(file);
-            int *id = (int *)StringToNumber(id_str, Integer);
+            int *id = (int *)StringToNumber(getWord(file), Integer);
             testLimits(*id, MAX_ID, true, file, "Student ID");
             student->id = *id;
             free(id);
@@ -291,8 +288,7 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
 
             for (size_t k = 0; k < *num_scores; k++)
             {
-                char *score_str = getWord(file);
-                float *score = (float *)StringToNumber(score_str, Float);
+                float *score = (float *)StringToNumber(getWord(file), Float);
                 testLimits(*score, MAX_SCORE, true, file, "Student Score");
 
                 score_avg += *score;
@@ -323,10 +319,9 @@ Course *readCourses(FileInfo *file, int *num_courses)
         current_course->course_name = getWord(file);
         testLimits((int)strlen(current_course->course_name), MAX_COURSE_NAME_LENGTH, false, file, "Course Name");
 
-        char *num_sections_str = getWord(file);
-        int *num_sections = (int *)StringToNumber(num_sections_str, Integer);
-
+        int *num_sections = (int *)StringToNumber(getWord(file), Integer);
         testLimits(*num_sections, MAX_NUM_OF_SECTIONS, false, file, "Section Number");
+        
         current_course->num_sections = *num_sections;
         free(num_sections);
 
