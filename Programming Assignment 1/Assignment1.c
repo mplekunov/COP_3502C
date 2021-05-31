@@ -209,8 +209,6 @@ void studentCpy(Student *dist, const Student *src)
     if(!dist->lname)
         dist->lname = (char *) malloc(sizeof(char));
 
-    //dist->lname = (char *) realloc(dist->lname, sizeof(char) * (strlen(src->lname) + 1));
-
     strcpy(dist->lname, src->lname);
 
     dist->std_avg = src->std_avg;
