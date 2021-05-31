@@ -74,14 +74,12 @@ int main()
 {
     FileInfo *file = openFile(INPUT_FILENAME);
 
-    char *num_cases_str = getWord(file);
-    int *num_cases = (int *)StringToNumber(num_cases_str, Integer);
+    int *num_cases = (int *)StringToNumber(getWord(file), Integer);
     testLimits(*num_cases, MAX_NUM_OF_TEST_CASES, false, file, "Case Number");
 
     for (size_t i = 0; i < *num_cases; i++)
     {
-        char *num_courses_str = getWord(file);
-        int *num_courses = (int *)StringToNumber(num_courses_str, Integer);
+        int *num_courses = (int *)StringToNumber(getWord(file), Integer);
         testLimits(*num_courses, MAX_NUM_OF_COURSES, false, file, "Course Number");
 
         Course *courses = readCourses(file, num_courses);
@@ -237,6 +235,7 @@ OutputInfo *countPassedStudents(Course *course)
     return out_info;
 }
 
+/*
 void studentCpy(Student *dist, const Student *src)
 {
     dist->id = src->id;
@@ -252,6 +251,7 @@ void studentCpy(Student *dist, const Student *src)
 
     memcpy(dist->scores, src->scores, sizeof(src->scores));
 }
+*/
 
 Student **readSections(FileInfo *file, int students[], int scores[], int num_sections)
 {
