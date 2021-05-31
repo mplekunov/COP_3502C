@@ -69,9 +69,6 @@ void closeFile(FileInfo *file);
 void *StringToNumber(char *string, DataType data_type);
 OutputInfo *countPassedStudents(Course *course);
 void studentCpy(Student *dist, const Student *src);
-OutputInfo *initOutputInfo(const Course *course);
-Student *initStudent();
-void freeStudent(Student *student);
 
 int main()
 {
@@ -93,13 +90,13 @@ int main()
         process_courses(courses, *num_courses);
 
         release_courses(courses, *num_courses);
-        
+
         free(num_courses);
     }
 
     closeFile(file);
     free(num_cases);
-    
+
     return 0;
 }
 
@@ -109,7 +106,12 @@ void release_courses(Course *courses, int num_courses)
     {
         Course *current_course = &courses[i];
         for (size_t j = 0; j < current_course->num_sections; ++j)
-            freeStudent(current_course->sections[j]);
+        {
+            free(current_course->sections[j]->lname);
+            free(current_course->sections[j]->scores);
+            free(current_course->sections[j]);
+            //freeStudent(current_course->sections[j]);
+        }
 
         free(current_course->sections);
         free(current_course->course_name);
@@ -120,12 +122,14 @@ void release_courses(Course *courses, int num_courses)
     free(courses);
 }
 
+/*
 void freeStudent(Student *student)
 {
     //free(student->lname);
     free(student->scores);
     free(student);
 }
+*/
 
 void process_courses(Course *courses, int num_courses)
 {
@@ -141,12 +145,15 @@ void process_courses(Course *courses, int num_courses)
 
         printf("%d %s %.2f\n", outInfo->student->id, outInfo->student->lname, outInfo->student->std_avg);
 
-        freeStudent(outInfo->student);
+        free(outInfo->student->lname);
+        free(outInfo->student->scores);
+        //freeStudent(outInfo->student);
         free(outInfo->avg_scores_per_section);
         free(outInfo);
     }
 }
 
+/*
 Student *initStudent()
 {
     Student *student = (Student *)malloc(sizeof(Student));
@@ -158,27 +165,47 @@ Student *initStudent()
 
     return student;
 }
-
+*/
+/*
 OutputInfo *initOutputInfo(const Course *course)
 {
     OutputInfo *outInfo = (OutputInfo *)malloc(sizeof(OutputInfo));
 
     outInfo->pass_count = 0;
     outInfo->avg_scores_per_section = (float *)malloc(course->num_sections * sizeof(float));
-    outInfo->student = initStudent();
+    outInfo->student = (Student *)malloc(sizeof(Student));
+    outInfo->student->id = 0;
+    outInfo->student->lname = (char *)malloc(sizeof(char));
+    outInfo->student->scores = NULL;
+    outInfo->student->std_avg = 0;
 
     return outInfo;
 }
-
+*/
 OutputInfo *countPassedStudents(Course *course)
 {
-    OutputInfo *outInfo = initOutputInfo(course);
+    //OutputInfo *outInfo = initOutputInfo(course);
+    OutputInfo *out_info = (OutputInfo *)malloc(sizeof(OutputInfo));
 
-    studentCpy(outInfo->student, (*(course->sections + 0) + 0));
+    out_info->pass_count = 0;
+    out_info->avg_scores_per_section = (float *)malloc(course->num_sections * sizeof(float));
+
+    out_info->student = (Student *)malloc(sizeof(Student));
+    out_info->student->id = 0;
+    out_info->student->lname = (char *)malloc(sizeof(char) * (strlen(course->sections[0][0].lname) + 1));
+    out_info->student->scores = (float *)malloc(course->num_scores[0] * sizeof(float));
+    out_info->student->std_avg = 0;
+
+    out_info->student->id = course->sections[0][0].id;
+    out_info->student->std_avg = course->sections[0][0].std_avg;
+    strcpy(out_info->student->lname, course->sections[0][0].lname);
+    memcpy(out_info->student->scores, course->sections[0][0].scores, course->num_scores[0] * sizeof(float));
+
+    //studentCpy(out_info->student, (*(course->sections + 0) + 0));
 
     for (size_t i = 0; i < course->num_sections; i++)
     {
-        float *avg_scores = (outInfo->avg_scores_per_section + i);
+        float *avg_scores = (out_info->avg_scores_per_section + i);
         *avg_scores = 0;
 
         for (size_t j = 0; j < *(course->num_students + i); j++)
@@ -187,10 +214,18 @@ OutputInfo *countPassedStudents(Course *course)
 
             if (student->std_avg >= PASS_SCORE)
             {
-                outInfo->pass_count++;
+                out_info->pass_count++;
 
-                if (outInfo->student->std_avg < student->std_avg)
-                    studentCpy(outInfo->student, student);
+                if (out_info->student->std_avg < student->std_avg)
+                {
+                    //studentCpy(out_info->student, student);
+                    out_info->student->id = student->id;
+                    out_info->student->std_avg = student->std_avg;
+                    out_info->student->lname = (char *)realloc(out_info->student->lname, sizeof(char) * (strlen(student->lname) + 1));
+                    strcpy(out_info->student->lname, student->lname);
+                    out_info->student->scores = (float *)realloc(out_info->student->scores, course->num_scores[i] * sizeof(float));
+                    memcpy(out_info->student->scores, course->sections[0][0].scores, course->num_scores[i] * sizeof(float));
+                }
             }
 
             (*avg_scores) += student->std_avg;
@@ -199,15 +234,15 @@ OutputInfo *countPassedStudents(Course *course)
         (*avg_scores) /= *(course->num_students + i);
     }
 
-    return outInfo;
+    return out_info;
 }
 
 void studentCpy(Student *dist, const Student *src)
 {
     dist->id = src->id;
 
-    if(!dist->lname)
-        dist->lname = (char *) malloc(sizeof(char));
+    if (!dist->lname)
+        dist->lname = (char *)malloc(sizeof(char));
 
     strcpy(dist->lname, src->lname);
 
@@ -223,7 +258,7 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
     Student **sections_and_students = (Student **)malloc(num_sections * sizeof(Student *));
 
     for (size_t i = 0; i < num_sections; i++)
-    {   
+    {
         char *num_students_str = getWord(file);
         int *num_students = (int *)StringToNumber(num_students_str, Integer);
         testLimits(*num_students, MAX_NUM_OF_STUDENTS_IN_SECTION, false, file, "Student Number");
