@@ -68,7 +68,8 @@ FileInfo *openFile(const char *filename);
 void closeFile(FileInfo *file);
 void *StringToNumber(char *string, DataType data_type);
 OutputInfo *countPassedStudents(Course *course);
-//void studentCpy(Student *dist, const Student *src);
+void studentCpy(Student *dist, const Student *src, const int *num_scores);
+OutputInfo *initOutputInfo(const Course *course);
 
 int main()
 {
@@ -110,10 +111,9 @@ void release_courses(Course *courses, int num_courses)
                 free(current_course->sections[j][k].lname);
                 free(current_course->sections[j][k].scores);
             }
-            
+
             free(current_course->sections[j]);            
             
-            //freeStudent(current_course->sections[j]);
         }
 
         free(current_course->sections);
@@ -125,15 +125,6 @@ void release_courses(Course *courses, int num_courses)
     free(courses);
 }
 
-/*
-void freeStudent(Student *student)
-{
-    //free(student->lname);
-    free(student->scores);
-    free(student);
-}
-*/
-
 void process_courses(Course *courses, int num_courses)
 {
     for (size_t i = 0; i < num_courses; i++)
@@ -144,14 +135,14 @@ void process_courses(Course *courses, int num_courses)
         printf("%s %d", current_course->course_name, outInfo->pass_count);
 
         for (size_t j = 0; j < current_course->num_sections; j++)
-            printf(" %.2f ", *(outInfo->avg_scores_per_section + j));
+            printf(" %.2f ", outInfo->avg_scores_per_section[j]);
 
         printf("%d %s %.2f\n", outInfo->student->id, outInfo->student->lname, outInfo->student->std_avg);
 
         free(outInfo->student->lname);
         free(outInfo->student->scores);
         free(outInfo->student);
-        //freeStudent(outInfo->student);
+
         free(outInfo->avg_scores_per_section);
         free(outInfo);
     }
@@ -170,40 +161,35 @@ Student *initStudent()
     return student;
 }
 */
-/*
+
+
 OutputInfo *initOutputInfo(const Course *course)
 {
-    OutputInfo *outInfo = (OutputInfo *)malloc(sizeof(OutputInfo));
+    Student *student = &(course->sections[0][0]);
+    int *num_scores = &(course->num_scores[0]);
 
-    outInfo->pass_count = 0;
-    outInfo->avg_scores_per_section = (float *)malloc(course->num_sections * sizeof(float));
-    outInfo->student = (Student *)malloc(sizeof(Student));
-    outInfo->student->id = 0;
-    outInfo->student->lname = (char *)malloc(sizeof(char));
-    outInfo->student->scores = NULL;
-    outInfo->student->std_avg = 0;
-
-    return outInfo;
-}
-*/
-OutputInfo *countPassedStudents(Course *course)
-{
-    //OutputInfo *outInfo = initOutputInfo(course);
     OutputInfo *out_info = (OutputInfo *)malloc(sizeof(OutputInfo));
 
     out_info->pass_count = 0;
+
     out_info->avg_scores_per_section = (float *)malloc(course->num_sections * sizeof(float));
-
+    
     out_info->student = (Student *)malloc(sizeof(Student));
-    out_info->student->lname = (char *)malloc((strlen(course->sections[0][0].lname) + 1) * sizeof(char));
-    out_info->student->scores = (float *)malloc(course->num_scores[0] * sizeof(float));
+            
+    out_info->student->id = student->id;
+    
+    out_info->student->lname = (char *)malloc((strlen(student->lname) + 1) * sizeof(char));
+    
+    out_info->student->scores = (float *)malloc(*num_scores * sizeof(float));
+    
+    out_info->student->std_avg = student->std_avg;
 
-    out_info->student->id = course->sections[0][0].id;
-    out_info->student->std_avg = course->sections[0][0].std_avg;
-    strcpy(out_info->student->lname, course->sections[0][0].lname);
-    memcpy(out_info->student->scores, course->sections[0][0].scores, course->num_scores[0] * sizeof(float));
+    return out_info;
+}
 
-    //studentCpy(out_info->student, (*(course->sections + 0) + 0));
+OutputInfo *countPassedStudents(Course *course)
+{
+    OutputInfo *out_info = initOutputInfo(course);
 
     for (size_t i = 0; i < course->num_sections; i++)
     {
@@ -219,15 +205,7 @@ OutputInfo *countPassedStudents(Course *course)
                 out_info->pass_count++;
 
                 if (out_info->student->std_avg < student->std_avg)
-                {
-                    //studentCpy(out_info->student, student);
-                    out_info->student->id = student->id;
-                    out_info->student->std_avg = student->std_avg;
-                    out_info->student->lname = (char *)realloc(out_info->student->lname, sizeof(char) * (strlen(student->lname) + 1));
-                    strcpy(out_info->student->lname, student->lname);
-                    out_info->student->scores = (float *)realloc(out_info->student->scores, course->num_scores[i] * sizeof(float));
-                    memcpy(out_info->student->scores, course->sections[0][0].scores, course->num_scores[i] * sizeof(float));
-                }
+                    studentCpy(out_info->student, student, &(course->num_scores[i]));
             }
 
             (*avg_scores) += student->std_avg;
@@ -239,23 +217,22 @@ OutputInfo *countPassedStudents(Course *course)
     return out_info;
 }
 
-/*
-void studentCpy(Student *dist, const Student *src)
+
+void studentCpy(Student *dist, const Student *src, const int *num_scores)
 {
     dist->id = src->id;
 
-    if (!dist->lname)
-        dist->lname = (char *)malloc(sizeof(char));
+    dist->lname = (char *)realloc(dist->lname, (strlen(src->lname) + 1) * sizeof(char));
 
     strcpy(dist->lname, src->lname);
 
     dist->std_avg = src->std_avg;
 
-    dist->scores = (float *)realloc(dist->scores, sizeof(src->scores));
+    dist->scores = (float *)realloc(dist->scores, *num_scores * sizeof(float));
 
-    memcpy(dist->scores, src->scores, sizeof(src->scores));
+    memcpy(dist->scores, src->scores, *num_scores * sizeof(float));
 }
-*/
+
 
 Student **readSections(FileInfo *file, int students[], int scores[], int num_sections)
 {
