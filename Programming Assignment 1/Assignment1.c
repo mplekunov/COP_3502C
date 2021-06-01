@@ -64,7 +64,7 @@ void release_courses(Course *courses, int num_courses);
 char *getWord(FileInfo *file);
 void testLimits(double num_to_test, double limit, bool isZeroAllowed, FileInfo *file, const char *variable_name);
 void errorHandler(FileInfo *file, InputFormatResult error, const char *variable_name);
-FileInfo *openFile(const char *filename);
+FileInfo *openFile(const char *filename, const char *mode);
 void closeFile(FileInfo *file);
 void *StringToNumber(char *string, DataType data_type);
 OutputInfo *countPassedStudents(Course *course);
@@ -73,7 +73,7 @@ OutputInfo *initOutputInfo(const Course *course);
 
 int main()
 {
-    FileInfo *file = openFile(INPUT_FILENAME);
+    FileInfo *file = openFile(INPUT_FILENAME, "r");
 
     int *num_cases = (int *)StringToNumber(getWord(file), Integer);
     testLimits(*num_cases, MAX_NUM_OF_TEST_CASES, false, file, "Case Number");
@@ -104,6 +104,7 @@ void release_courses(Course *courses, int num_courses)
     for (size_t i = 0; i < num_courses; i++)
     {
         Course *current_course = &courses[i];
+       
         for (size_t j = 0; j < current_course->num_sections; ++j)
         {
             for (size_t k = 0; k < current_course->num_students[j]; k++)
@@ -113,7 +114,6 @@ void release_courses(Course *courses, int num_courses)
             }
 
             free(current_course->sections[j]);            
-            
         }
 
         free(current_course->sections);
@@ -130,38 +130,23 @@ void process_courses(Course *courses, int num_courses)
     for (size_t i = 0; i < num_courses; i++)
     {
         Course *current_course = &courses[i];
-        OutputInfo *outInfo = countPassedStudents(current_course);
+        OutputInfo *out_info = countPassedStudents(current_course);
 
-        printf("%s %d", current_course->course_name, outInfo->pass_count);
+        printf("%s %d", current_course->course_name, out_info->pass_count);
 
         for (size_t j = 0; j < current_course->num_sections; j++)
-            printf(" %.2f ", outInfo->avg_scores_per_section[j]);
+            printf(" %.2f ", out_info->avg_scores_per_section[j]);
 
-        printf("%d %s %.2f\n", outInfo->student->id, outInfo->student->lname, outInfo->student->std_avg);
+        printf("%d %s %.2f\n", out_info->student->id, out_info->student->lname, out_info->student->std_avg);
 
-        free(outInfo->student->lname);
-        free(outInfo->student->scores);
-        free(outInfo->student);
+        free(out_info->student->lname);
+        free(out_info->student->scores);
+        free(out_info->student);
 
-        free(outInfo->avg_scores_per_section);
-        free(outInfo);
+        free(out_info->avg_scores_per_section);
+        free(out_info);
     }
 }
-
-/*
-Student *initStudent()
-{
-    Student *student = (Student *)malloc(sizeof(Student));
-
-    student->id = 0;
-    student->lname = NULL;
-    student->scores = NULL;
-    student->std_avg = 0;
-
-    return student;
-}
-*/
-
 
 OutputInfo *initOutputInfo(const Course *course)
 {
@@ -180,7 +165,11 @@ OutputInfo *initOutputInfo(const Course *course)
     
     out_info->student->lname = (char *)malloc((strlen(student->lname) + 1) * sizeof(char));
     
+    strcpy(out_info->student->lname, student->lname);
+
     out_info->student->scores = (float *)malloc(*num_scores * sizeof(float));
+
+    memcpy(out_info->student->scores, student->scores, course->num_scores[0] * sizeof(float));
     
     out_info->student->std_avg = student->std_avg;
 
@@ -196,9 +185,9 @@ OutputInfo *countPassedStudents(Course *course)
         float *avg_scores = &(out_info->avg_scores_per_section[i]);
         *avg_scores = 0;
 
-        for (size_t j = 0; j < *(course->num_students + i); j++)
+        for (size_t j = 0; j < course->num_students[i]; j++)
         {
-            Student *student = (*(course->sections + i) + j);
+            Student *student = &(course->sections[i][j]);
 
             if (student->std_avg >= PASS_SCORE)
             {
@@ -257,6 +246,7 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
 
             int *id = (int *)StringToNumber(getWord(file), Integer);
             testLimits(*id, MAX_ID, true, file, "Student ID");
+            
             student->id = *id;
             free(id);
 
@@ -344,11 +334,11 @@ void closeFile(FileInfo *file)
     free(file);
 }
 
-FileInfo *openFile(const char *filename)
+FileInfo *openFile(const char *filename, const char *mode)
 {
     FileInfo *file = (FileInfo *)malloc(sizeof(FileInfo));
 
-    FILE *fptr = fopen(filename, "r");
+    FILE *fptr = fopen(filename, mode);
 
     file->fptr = fptr;
     file->current_line = 1;
