@@ -68,7 +68,7 @@ FileInfo *openFile(const char *filename);
 void closeFile(FileInfo *file);
 void *StringToNumber(char *string, DataType data_type);
 OutputInfo *countPassedStudents(Course *course);
-void studentCpy(Student *dist, const Student *src);
+//void studentCpy(Student *dist, const Student *src);
 
 int main()
 {
@@ -105,9 +105,14 @@ void release_courses(Course *courses, int num_courses)
         Course *current_course = &courses[i];
         for (size_t j = 0; j < current_course->num_sections; ++j)
         {
-            free(current_course->sections[j]->lname);
-            free(current_course->sections[j]->scores);
-            free(current_course->sections[j]);
+            for (size_t k = 0; k < current_course->num_students[j]; k++)
+            {
+                free(current_course->sections[j][k].lname);
+                free(current_course->sections[j][k].scores);
+            }
+            
+            free(current_course->sections[j]);            
+            
             //freeStudent(current_course->sections[j]);
         }
 
