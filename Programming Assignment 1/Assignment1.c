@@ -153,23 +153,23 @@ OutputInfo *initOutputInfo(const Course *course)
     Student *student = &(course->sections[0][0]);
     int *num_scores = &(course->num_scores[0]);
 
-    OutputInfo *out_info = (OutputInfo *)malloc(sizeof(OutputInfo));
+    OutputInfo *out_info = malloc(sizeof(*out_info));
 
     out_info->pass_count = 0;
 
-    out_info->avg_scores_per_section = (float *)malloc(course->num_sections * sizeof(float));
+    out_info->avg_scores_per_section = malloc(course->num_sections * sizeof(*out_info->avg_scores_per_section));
     
-    out_info->student = (Student *)malloc(sizeof(Student));
+    out_info->student = malloc(sizeof(*out_info->student));
             
     out_info->student->id = student->id;
     
-    out_info->student->lname = (char *)malloc((strlen(student->lname) + 1) * sizeof(char));
+    out_info->student->lname = malloc((strlen(student->lname) + 1) * sizeof(*student->lname));
     
     strcpy(out_info->student->lname, student->lname);
 
-    out_info->student->scores = (float *)malloc(*num_scores * sizeof(float));
+    out_info->student->scores = malloc(*num_scores * sizeof(*out_info->student->scores));
 
-    memcpy(out_info->student->scores, student->scores, course->num_scores[0] * sizeof(float));
+    memcpy(out_info->student->scores, student->scores, course->num_scores[0] * sizeof(*student->scores));
     
     out_info->student->std_avg = student->std_avg;
 
@@ -211,15 +211,15 @@ void studentCpy(Student *dist, const Student *src, const int *num_scores)
 {
     dist->id = src->id;
 
-    dist->lname = (char *)realloc(dist->lname, (strlen(src->lname) + 1) * sizeof(char));
+    dist->lname = realloc(dist->lname, (strlen(src->lname) + 1) * sizeof(*dist->lname));
 
     strcpy(dist->lname, src->lname);
 
     dist->std_avg = src->std_avg;
 
-    dist->scores = (float *)realloc(dist->scores, *num_scores * sizeof(float));
+    dist->scores = realloc(dist->scores, *num_scores * sizeof(*src->scores));
 
-    memcpy(dist->scores, src->scores, *num_scores * sizeof(float));
+    memcpy(dist->scores, src->scores, *num_scores * sizeof(*src->scores));
 }
 
 
@@ -238,7 +238,7 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
         students[i] = *num_students;
         scores[i] = *num_scores;
 
-        sections_and_students[i] = (Student *)malloc(*num_students * sizeof(Student));
+        sections_and_students[i] = malloc(*num_students * sizeof(*sections_and_students[i]));
 
         for (size_t j = 0; j < *num_students; j++)
         {
@@ -255,7 +255,7 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
 
             float score_avg = 0;
 
-            student->scores = (float *)malloc(*num_scores * sizeof(float));
+            student->scores = malloc(*num_scores * sizeof(*student->scores));
 
             for (size_t k = 0; k < *num_scores; k++)
             {
@@ -264,7 +264,7 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
 
                 score_avg += *score;
 
-                *(student->scores + k) = *score;
+                student->scores[k] = *score;
 
                 free(score);
             }
@@ -281,7 +281,7 @@ Student **readSections(FileInfo *file, int students[], int scores[], int num_sec
 
 Course *readCourses(FileInfo *file, int *num_courses)
 {
-    Course *courses = (Course *)malloc(sizeof(Course) * (*num_courses));
+    Course *courses = malloc(sizeof(*courses) * (*num_courses));
 
     for (size_t i = 0; i < *num_courses; i++)
     {
@@ -296,8 +296,8 @@ Course *readCourses(FileInfo *file, int *num_courses)
         current_course->num_sections = *num_sections;
         free(num_sections);
 
-        current_course->num_students = (int *)malloc(current_course->num_sections * sizeof(int));
-        current_course->num_scores = (int *)malloc(current_course->num_sections * sizeof(int));
+        current_course->num_students = malloc(current_course->num_sections * sizeof(*current_course->num_students));
+        current_course->num_scores = malloc(current_course->num_sections * sizeof(*current_course->num_scores));
 
         current_course->sections = readSections(file, current_course->num_students, current_course->num_scores, current_course->num_sections);
     }
@@ -309,14 +309,14 @@ void *StringToNumber(char *string, DataType data_type)
 {
     if (data_type == Integer)
     {
-        int *num = (int *)malloc(sizeof(int));
+        int *num = malloc(sizeof(*num));
         *num = atoi(string);
         free(string);
         return num;
     }
     else if (data_type == Float)
     {
-        float *num = (float *)malloc(sizeof(float));
+        float *num = malloc(sizeof(*num));
         *num = atof(string);
         free(string);
         return num;
@@ -336,7 +336,7 @@ void closeFile(FileInfo *file)
 
 FileInfo *openFile(const char *filename, const char *mode)
 {
-    FileInfo *file = (FileInfo *)malloc(sizeof(FileInfo));
+    FileInfo *file = malloc(sizeof(*file));
 
     FILE *fptr = fopen(filename, mode);
 
@@ -400,7 +400,7 @@ char *getWord(FileInfo *file)
         {
             size += sizeof(char);
 
-            lineptr = (char *)realloc(lineptr, size);
+            lineptr = realloc(lineptr, size);
         }
 
         lineptr[index++] = ch;
