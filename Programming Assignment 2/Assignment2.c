@@ -70,7 +70,6 @@ Node *processCustomers(Queue *collection, int num_customers);
 int calculateCheckoutTime(Customer *customer, int current_time);
 void copyCustomer(Customer *dist, Customer *src);
 
-
 int main()
 {
     FileInfo *file = openFile(INPUT_FILENAME, "r");
@@ -98,7 +97,7 @@ int main()
 
             free(temp->customer->name);
             free(temp->customer);
-            free(temp);   
+            free(temp);
         }
 
         free(lines);
@@ -119,7 +118,10 @@ int isEmpty(Queue *queue)
 
 Node *peek(Queue *queue)
 {
-    return queue->front;
+    if (isEmpty(queue))
+        return NULL;
+    else
+        return queue->front;
 }
 
 Queue *createQueue()
@@ -154,16 +156,17 @@ void deQueue(Queue *queue)
     if (queue->front == NULL)
         queue->back = NULL;
 
-    free(front->customer->name);
-    free(front->customer);
+    // free(front->customer->name);
+    // free(front->customer);
     free(front);
 }
 
 Node *newNode(Customer *customer)
 {
     Node *temp = malloc(sizeof(*temp));
-    temp->customer = malloc(sizeof(*temp->customer));
-    copyCustomer(temp->customer, customer);
+    temp->customer = customer;
+    // temp->customer = malloc(sizeof(*temp->customer));
+    // copyCustomer(temp->customer, customer);
     temp->next = NULL;
     return temp;
 }
@@ -187,57 +190,81 @@ void copyCustomer(Customer *dist, Customer *src)
 
 Node *processCustomers(Queue *lines, int num_customers)
 {
-    Customer *first_customer = NULL;
-    Node *checkoutOrder = newNode(first_customer);
-    
+    // Customer *first_customer = NULL;
+    Node *checkoutOrder = NULL;
+    int current_time = 0;
     //Customer *checkoutOrder = malloc(sizeof(*checkoutOrder) * num_customers);
 
-    //Finds first customer
-    for (size_t i = 0; i < MAX_NUMBER_OF_LINES; i++)
+    for (size_t i = 0; i < num_customers; i++)
     {
-        Node *current_node = peek(&lines[i]);
-        if (current_node != NULL)
-        {
-            if (first_customer == NULL || first_customer->arrival_time > current_node->customer->arrival_time)
-                first_customer = current_node->customer;
-        }
-    }
+        int num_available_customers = 0;
 
-    first_customer->departure_time = calculateCheckoutTime(first_customer, first_customer->arrival_time);
-    int arrival_time = first_customer->departure_time;
+        Customer *customer = NULL;
 
-    copyCustomer(checkoutOrder->customer, first_customer);
-
-    deQueue(&lines[first_customer->line_number - 1]);
-
-    for (size_t i = 1; i < num_customers; i++)
-    {
-        Node *node = NULL;
-
-        //Finds the customer with lowest number of items
         for (size_t j = 0; j < MAX_NUMBER_OF_LINES; j++)
         {
-            Node *current_node = peek(&lines[j]);
-
-            if (current_node != NULL)
+            if (!isEmpty(&lines[j]))
             {
-                if (node == NULL || node->customer->num_of_items > current_node->customer->num_of_items)
-                    node = current_node;
+                Customer *current_customer = peek(&lines[j])->customer;
+
+                if (current_customer->arrival_time < current_time)
+                    num_available_customers++;
             }
         }
 
-        node->customer->departure_time = calculateCheckoutTime(node->customer, arrival_time);
+        int isFirst = 0;
+        if (num_available_customers == 0)
+            isFirst = 1;
 
-        Node *last = checkoutOrder;
-        while (last->next != NULL)
-            last = last->next;
+        //Find customer
+        for (size_t j = 0; j < MAX_NUMBER_OF_LINES; j++)
+        {
+            if (!isEmpty(&lines[j]))
+            {
+                Customer *current_customer = peek(&lines[j])->customer;
+                //First customer
 
-        last->next = newNode(node->customer);
+                if (num_available_customers > 0)
+                {
+                    if (current_customer->arrival_time < current_time)
+                    {
+                        if (customer == NULL || customer->num_of_items > current_customer->num_of_items ||
+                            (customer->num_of_items == current_customer->num_of_items && customer->line_number > current_customer->line_number))
+                            customer = current_customer;
 
-        arrival_time = node->customer->departure_time;
+                        if (--num_available_customers == 0)
+                            break;
+                    }
 
-        deQueue(&lines[node->customer->line_number - 1]);
+                }
+                else 
+                {
+                    if (customer == NULL || customer->arrival_time > current_customer->arrival_time)
+                        customer = current_customer;
+                }
+            }
+        }
 
+        deQueue(&lines[customer->line_number - 1]);
+
+        //First customer
+        if (i == 0)
+            checkoutOrder = newNode(customer);
+        else
+        {
+            //checkout customer
+            Node *last_node = checkoutOrder;
+            while (last_node->next != NULL)
+                last_node = last_node->next;
+
+            last_node->next = newNode(customer);
+        }
+
+        if (isFirst || i == 0)
+            current_time = customer->arrival_time;
+
+        customer->departure_time = calculateCheckoutTime(customer, current_time);
+        current_time = customer->departure_time;
     }
 
     return checkoutOrder;
@@ -248,10 +275,7 @@ Queue *sortCustomers(FileInfo *file, int num_customers)
     Queue *lines = malloc(sizeof(*lines) * MAX_NUMBER_OF_LINES);
 
     for (size_t i = 0; i < MAX_NUMBER_OF_LINES; i++)
-    {
-        lines[i].back = NULL;
-        lines[i].front = NULL;
-    }
+        lines[i].back = lines[i].front = NULL;
 
     for (size_t i = 0; i < num_customers; i++)
     {
@@ -268,7 +292,7 @@ Queue *sortCustomers(FileInfo *file, int num_customers)
         name = realloc(name, strlen(name) + 1);
 
         Customer *customer = malloc(sizeof(*customer));
-        
+
         customer->name = strdup(name);
         customer->arrival_time = arrival_time;
         customer->departure_time = -1;
@@ -277,18 +301,10 @@ Queue *sortCustomers(FileInfo *file, int num_customers)
 
         enQueue(&lines[--line], customer);
 
-        free(customer->name);
-        free(customer);
         free(name);
     }
 
     return lines;
-}
-
-void freeCustomer(Customer *customer)
-{
-    free(customer->name);
-    free(customer);
 }
 
 void closeFile(FileInfo *file_info)
