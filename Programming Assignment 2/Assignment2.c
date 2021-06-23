@@ -22,7 +22,6 @@ typedef struct Customer
     char *name;
     int num_of_items;
     int arrival_time;
-    int departure_time;
     int line_number;
 } Customer;
 
@@ -158,10 +157,11 @@ void checkoutCustomers(Queue *queues, int num_customers)
 
     for (size_t i = 0; i < num_customers; i++)
     {
-        int available_customers = 0;
-
+        int *occupied_store_lines = NULL;
+        size_t max_index = 0;
         Customer *customer = NULL;
 
+        //Looks for lines that have customers who arrived before current_time
         for (size_t j = 0; j < MAX_NUMBER_OF_LINES; j++)
         {
             if (!isEmpty(&queues[j]))
@@ -169,36 +169,36 @@ void checkoutCustomers(Queue *queues, int num_customers)
                 Customer *current_customer = peek(&queues[j])->customer;
 
                 if (current_customer->arrival_time < current_time)
-                    available_customers++;
+                {
+                    occupied_store_lines = realloc(occupied_store_lines, sizeof(*occupied_store_lines) * (max_index + 1));
+                    occupied_store_lines[max_index++] = current_customer->line_number - 1;
+                }
             }
         }
 
-        int isFirst = 0;
-        if (available_customers == 0)
-            isFirst = 1;
-
-        //Find customer
-        for (size_t j = 0; j < MAX_NUMBER_OF_LINES; j++)
+        //If there are currently customers who arrived before current time, figures out who to serve first
+        //If there are currently no customers, waits for the first customer to come 
+        if (occupied_store_lines != NULL)
         {
-            if (!isEmpty(&queues[j]))
+            for (size_t j = 0; j < max_index; j++)
             {
-                Customer *current_customer = peek(&queues[j])->customer;
-                //First customer
+                Customer *current_customer = peek(&queues[occupied_store_lines[j]])->customer;
 
-                if (available_customers > 0)
-                {
-                    if (current_customer->arrival_time < current_time)
-                    {
-                        if (customer == NULL || customer->num_of_items > current_customer->num_of_items ||
-                            (customer->num_of_items == current_customer->num_of_items && customer->line_number > current_customer->line_number))
-                            customer = current_customer;
-
-                        if (--available_customers == 0)
-                            break;
-                    }
+                if (customer == NULL || customer->num_of_items > current_customer->num_of_items ||
+                    (customer->num_of_items == current_customer->num_of_items && customer->line_number > current_customer->line_number))
+                {    
+                    customer = current_customer;
                 }
-                else
+            }
+        }
+        else
+        {
+            for (size_t j = 0; j < MAX_NUMBER_OF_LINES; j++)
+            {
+                if (!isEmpty(&queues[j]))
                 {
+                    Customer *current_customer = peek(&queues[j])->customer;
+
                     if (customer == NULL || customer->arrival_time > current_customer->arrival_time)
                         customer = current_customer;
                 }
@@ -207,17 +207,17 @@ void checkoutCustomers(Queue *queues, int num_customers)
 
         deQueue(&queues[customer->line_number - 1]);
 
-        if (isFirst)
+        if (occupied_store_lines == NULL)
             current_time = customer->arrival_time;
 
-        customer->departure_time = calculateCheckoutTime(customer, current_time);
-        current_time = customer->departure_time;
+        current_time = calculateCheckoutTime(customer, current_time);
 
-        printf("Name: %s, Line: %d, Departure Time: %d\n", 
-            customer->name, customer->line_number, customer->departure_time);
+        printf("%s from line %d checks out at time %d.\n",
+               customer->name, customer->line_number, current_time);
 
         free(customer->name);
         free(customer);
+        free(occupied_store_lines);
     }
 }
 
@@ -246,7 +246,6 @@ Queue *sortCustomers(FileInfo *file, int num_customers)
 
         customer->name = strdup(name);
         customer->arrival_time = arrival_time;
-        customer->departure_time = -1;
         customer->line_number = line;
         customer->num_of_items = num_of_items;
 
