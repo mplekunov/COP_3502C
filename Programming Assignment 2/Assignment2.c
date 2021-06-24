@@ -33,7 +33,7 @@ typedef struct Node
 
 typedef struct Queue
 {
-    Node *front, *back; // 1 2 3
+    Node *front, *back;
 } Queue;
 
 //Enum defining an out-of-range error used in constraints checking
@@ -54,7 +54,7 @@ typedef struct FileInfo
 
 void enQueue(Queue *queue, Customer *customer);
 void deQueue(Queue *queue);
-Node *peek(Queue *queue);
+Customer *peek(Queue *queue);
 int isEmpty(Queue *queue);
 
 Node *newNode(Customer *customer);
@@ -73,13 +73,19 @@ int main()
 
     int num_cases;
     fscanf(file->fptr, "%d", &num_cases);
+    file->current_line++;
+
     testLimits(num_cases, MAX_NUM_OF_TEST_CASES, false, file, "Case Number");
 
     //iterates through all test cases
+    //Sorts customers by their checkout line
+    //Checkout customers
     for (size_t i = 0; i < num_cases; i++)
     {
         int num_customers;
         fscanf(file->fptr, "%d", &num_customers);
+        file->current_line++;
+
         testLimits(num_customers, MAX_NUM_OF_CUSTOMERS, false, file, "Number of Customers");
 
         Queue *lines = sortCustomers(file, num_customers);
@@ -94,6 +100,10 @@ int main()
     return 0;
 }
 
+/*
+    Tests if the queue is empty
+    Returns test result
+*/
 int isEmpty(Queue *queue)
 {
     if (queue->front == NULL)
@@ -102,14 +112,21 @@ int isEmpty(Queue *queue)
     return 0;
 }
 
-Node *peek(Queue *queue)
+/*
+    look at the first (front) node in the queue
+    Returns that node 
+*/
+Customer *peek(Queue *queue)
 {
     if (isEmpty(queue))
         return NULL;
     else
-        return queue->front;
+        return queue->front->customer;
 }
 
+/*
+    Adds customer into the queue node
+*/
 void enQueue(Queue *queue, Customer *customer)
 {
     Node *node = newNode(customer);
@@ -123,6 +140,10 @@ void enQueue(Queue *queue, Customer *customer)
     }
 }
 
+/*
+    Removes node from the queue
+    Address of the customer remains untouched
+*/
 void deQueue(Queue *queue)
 {
     if (queue->front == NULL)
@@ -138,6 +159,10 @@ void deQueue(Queue *queue)
     free(front);
 }
 
+/*
+    Creates new node and assigns customer to it
+    Returns an address of the node
+*/
 Node *newNode(Customer *customer)
 {
     Node *temp = malloc(sizeof(*temp));
@@ -146,94 +171,119 @@ Node *newNode(Customer *customer)
     return temp;
 }
 
+/*
+    Calculates checkout time
+*/
 int calculateCheckoutTime(Customer *customer, int current_time)
 {
     return current_time + customer->num_of_items * BASE_TIME_TO_CHECK_ONE_ITEM + BASE_TIME_TO_CHECK_CUSTOMER;
 }
 
+/*
+    Simulate checkout order for all customers in all queues (lines)
+*/
 void checkoutCustomers(Queue *queues, int num_customers)
 {
     int current_time = 0;
 
+    //As longs as there are customers, iterates through each of them
     for (size_t i = 0; i < num_customers; i++)
     {
+        //stores the numbers of lines that have customers in it
         int *occupied_store_lines = NULL;
+        //stores the max index of occupied_store_lines array
         size_t max_index = 0;
-        Customer *customer = NULL;
+
+        //current customer to be served
+        Customer *current_customer = NULL;
 
         //Looks for lines that have customers who arrived before current_time
+        //Adds line nunbers of those customers to occupied_store_lines array
         for (size_t j = 0; j < MAX_NUMBER_OF_LINES; j++)
         {
             if (!isEmpty(&queues[j]))
             {
-                Customer *current_customer = peek(&queues[j])->customer;
+                Customer *customer = peek(&queues[j]);
 
-                if (current_customer->arrival_time < current_time)
+                if (customer->arrival_time < current_time)
                 {
                     occupied_store_lines = realloc(occupied_store_lines, sizeof(*occupied_store_lines) * (max_index + 1));
-                    occupied_store_lines[max_index++] = current_customer->line_number - 1;
+                    occupied_store_lines[max_index++] = customer->line_number - 1;
                 }
             }
         }
 
         //If there are currently customers who arrived before current time, figures out who to serve first
-        //If there are currently no customers, waits for the first customer to come 
+        //If there are currently no customers, "awaits" for the first customer to come 
         if (occupied_store_lines != NULL)
         {
+            //Iterates as many times, as there are lines in an array
             for (size_t j = 0; j < max_index; j++)
             {
-                Customer *current_customer = peek(&queues[occupied_store_lines[j]])->customer;
+                Customer *customer = peek(&queues[occupied_store_lines[j]]);
 
-                if (customer == NULL || customer->num_of_items > current_customer->num_of_items ||
-                    (customer->num_of_items == current_customer->num_of_items && customer->line_number > current_customer->line_number))
+                if (current_customer == NULL || current_customer->num_of_items > customer->num_of_items ||
+                    (current_customer->num_of_items == customer->num_of_items && current_customer->line_number > customer->line_number))
                 {    
-                    customer = current_customer;
+                    current_customer = customer;
                 }
             }
         }
         else
         {
+            //Iterates through all lines in the store to "wait"/"look" for new customer
             for (size_t j = 0; j < MAX_NUMBER_OF_LINES; j++)
             {
                 if (!isEmpty(&queues[j]))
                 {
-                    Customer *current_customer = peek(&queues[j])->customer;
+                    Customer *customer = peek(&queues[j]);
 
-                    if (customer == NULL || customer->arrival_time > current_customer->arrival_time)
-                        customer = current_customer;
+                    if (current_customer == NULL || current_customer->arrival_time > customer->arrival_time)
+                        current_customer = customer;
                 }
             }
         }
 
-        deQueue(&queues[customer->line_number - 1]);
+        deQueue(&queues[current_customer->line_number - 1]);
 
+        //If there are no customers at current_time, then it waits untill fist customer appears
+        //Therefore it will wait untill current_time == arrival_time of the first customer to appear
         if (occupied_store_lines == NULL)
-            current_time = customer->arrival_time;
+            current_time = current_customer->arrival_time;
 
-        current_time = calculateCheckoutTime(customer, current_time);
+        current_time = calculateCheckoutTime(current_customer, current_time);
 
         printf("%s from line %d checks out at time %d.\n",
-               customer->name, customer->line_number, current_time);
+               current_customer->name, current_customer->line_number, current_time);
 
-        free(customer->name);
-        free(customer);
+        free(current_customer->name);
+        free(current_customer);
         free(occupied_store_lines);
     }
 }
 
+/*
+    Sort customers by lines
+    Returns filled collection of lines
+*/
 Queue *sortCustomers(FileInfo *file, int num_customers)
 {
     Queue *lines = malloc(sizeof(*lines) * MAX_NUMBER_OF_LINES);
 
+    //Initializes all lines to NULL
     for (size_t i = 0; i < MAX_NUMBER_OF_LINES; i++)
         lines[i].back = lines[i].front = NULL;
 
+    //for each customer in the file takes customer information
+    //Tests it for limits
+    //puts it into the queue corresponding to the line number 
     for (size_t i = 0; i < num_customers; i++)
     {
         int arrival_time, line, num_of_items;
         char *name = malloc(sizeof(*name) * MAX_NAME_LENGTH);
 
         fscanf(file->fptr, "%d %d %s %d", &arrival_time, &line, name, &num_of_items);
+        file->current_line++;
 
         testLimits(arrival_time, MAX_TIME_IN_SECONDS, true, file, "Arrival Time");
         testLimits(line, MAX_NUMBER_OF_LINES, false, file, "Line Number");
@@ -257,6 +307,9 @@ Queue *sortCustomers(FileInfo *file, int num_customers)
     return lines;
 }
 
+/*
+    Closes file and frees memory
+*/
 void closeFile(FileInfo *file_info)
 {
     fclose(file_info->fptr);
@@ -315,7 +368,7 @@ FileInfo *openFile(const char *filename, const char *mode)
     FILE *fptr = fopen(filename, mode);
 
     file->fptr = fptr;
-    file->current_line = 1;
+    file->current_line = 0;
 
     return file;
 }
