@@ -17,6 +17,10 @@ This program is written by: Mikhail Plekunov */
 #define MAX_NUMBER_OF_ITEMS 100
 #define INPUT_FILENAME "assignment2input.txt"
 
+<<<<<<< HEAD
+//Customer struct representing each customer
+=======
+>>>>>>> d4dd9a55cf33494190c293637da442ba670c3995
 typedef struct Customer
 {
     char *name;
@@ -25,12 +29,20 @@ typedef struct Customer
     int line_number;
 } Customer;
 
+<<<<<<< HEAD
+//Node struct
+=======
+>>>>>>> d4dd9a55cf33494190c293637da442ba670c3995
 typedef struct Node
 {
     Customer *customer;
     struct Node *next;
 } Node;
 
+<<<<<<< HEAD
+//Queue struct representing each line in store
+=======
+>>>>>>> d4dd9a55cf33494190c293637da442ba670c3995
 typedef struct Queue
 {
     Node *front, *back;
@@ -58,6 +70,10 @@ Customer *peek(Queue *queue);
 int isEmpty(Queue *queue);
 
 Node *newNode(Customer *customer);
+<<<<<<< HEAD
+
+=======
+>>>>>>> d4dd9a55cf33494190c293637da442ba670c3995
 FileInfo *openFile(const char *filename, const char *mode);
 void closeFile(FileInfo *file_info);
 void testLimits(double num_to_test, double limit, bool isZeroAllowed, FileInfo *file, const char *variable_name);
